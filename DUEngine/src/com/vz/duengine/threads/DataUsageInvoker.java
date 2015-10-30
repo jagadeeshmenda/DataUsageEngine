@@ -10,6 +10,19 @@ public class DataUsageInvoker  extends Thread {
         setDaemon(true);
     }
     public void run(){
+    	 try  {
+    		 DataUsageInvoker dt = new DataUsageInvoker();
+             ArrayList <String> states  = dt.getStateList();
+             
+             for (String state  :  states) {
+            	 NotifyProcessor np  =  new NotifyProcessor (state);
+            	 np.start(); 
+             }
+            	
+             this.sleep(10000);
+            }catch  (Exception ex) {
+            	
+            }
         System.out.println("Is this thread Daemon? - "+isDaemon());
     }
     public static void main(String a[]){
@@ -18,17 +31,6 @@ public class DataUsageInvoker  extends Thread {
         // it is like dt.setDeamon(true)
         dt.start();
         
-        
-        try  {
-         ArrayList <String> states  = dt.getStateList();
-         
-         for (String state  :  states) {
-        	 
-         }
-        	
-        }catch  (Exception ex) {
-        	
-        }
     		
     }
     
