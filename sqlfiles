@@ -1,0 +1,80 @@
+-- triggers
+CREATE OR REPLACE TRIGGER cust_data_usge_update AFTER
+  INSERT
+    ON vz_usage_info FOR EACH ROW
+  declare   
+  BEGIN
+  
+    UPDATE
+      vz_usage_notification
+    SET  hourly_agg := 
+      CASE
+        WHEN LAST_UPDATE_TIME < (sysdate   - 1/24)
+        THEN        hourly_agg + :new.usage
+        ELSE  :new.usage
+      END ,
+      CASE
+        WHEN TRUNC (LAST_UPDATE_TIME )                  = TRUNC (sysdate )
+        THEN daily_aggr                                := daily_aggr + :new.usage
+        WHEN TRUNC (LAST_UPDATE_TIME )              + 1 = TRUNC (sysdate )
+          daily_aggr                                   := :new.usage
+      END,
+      MONTHLY_AGG := MONTHLY_AGG + :new.usage
+    WHERE
+      cust_id = :new.cust_id ;
+    COMMIT;
+  END;
+  -- trigger 2
+  -- triggers
+CREATE OR REPLACE TRIGGER cust_data_usge_update AFTER
+  INSERT
+    ON vz_usage_info FOR EACH ROW DECLARE v_user VARCHAR2(20);
+  v_cust_id                                      VARCHAR2(20);
+  v_usage                                        VARCHAR2(20);
+  BEGIN
+    -- Find username of person performing the INSERT into the table
+    SELECT
+      USER
+    INTO
+      v_username
+    FROM
+      dual;
+    UPDATE
+      vz_usage_notification
+    SET
+      CASE
+        WHEN LAST_UPDATE_TIME < (sysdate   - 1/24)
+        THEN hourly_agg      := hourly_agg + :new.usage
+        ELSE hourly_agg :     = :new.usage
+      END ,
+      CASE
+        WHEN TRUNC (LAST_UPDATE_TIME ) = TRUNC (sysdate )
+        THEN daily_aggr               := daily_aggr + :new.usage
+        WHEN TRUNC (LAST_UPDATE_TIME ) < TRUNC (sysdate )
+        THEN daily_aggr               := :new.usage
+      END,
+      WHEN
+      (
+        (
+          bill_cycle_date           > TO_CHAR(sysdate, 'DD')
+        AND TO_CHAR(sysdate , 'MM') = TO_CHAR(LAST_UPDATE_TIME, 'MM')
+        )
+      OR bill_cycle_date          < TO_CHAR(sysdate, 'DD')
+      AND TO_CHAR(sysdate , 'MM') = TO_CHAR(LAST_UPDATE_TIME, 'MM')+1
+      )
+      THEN MONTHLY_AGG := MONTHLY_AGG + :new.usage WHEN
+      (
+        bill_cycle_date           = TO_CHAR(sysdate, 'DD')
+      AND TO_CHAR(sysdate, 'DD')  == TO_CHAR(LAST_UPDATE_TIME, 'DD')
+      AND TO_CHAR(sysdate , 'MM') = TO_CHAR(LAST_UPDATE_TIME, 'MM') THEN
+        MONTHLY_AGG := MONTHLY_AGG + :new.usage
+        WHEN
+      (
+        bill_cycle_date           = TO_CHAR(sysdate, 'DD')
+      AND TO_CHAR(sysdate, 'DD')  <> TO_CHAR(LAST_UPDATE_TIME, 'DD')
+      AND TO_CHAR(sysdate , 'MM') = TO_CHAR(LAST_UPDATE_TIME, 'MM') THEN
+        MONTHLY_AGG :=  :new.usage
+      WHERE
+        cust_id = :new.cust_id ;
+      COMMIT;
+    END;
